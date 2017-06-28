@@ -5,13 +5,22 @@
 
 use strict;
 use warnings;
-my $APACHE_VHOSTS_DIR="/etc/apache2/vhosts.d/";
-my $NAME="chocobo";
-my $FILE=$APACHE_VHOSTS_DIR."chocobo";
-my $ADDRESS="127.0.0.1";
-
-#use Functions qw(restart_daemon Functions::enable_daemon disable_daemon)
 use Functions;
+
+my $APACHE_VHOSTS_DIR="/etc/apache2/vhosts.d/";
+my $FILE=$APACHE_VHOSTS_DIR.Name";
+my($name, $ip_address) = @ARGV;
+
+
+if (not defined $name) {
+	die "Need a name";
+}
+
+if (not defined $ip_address) {
+	die "Need an IP address.";
+}
+
+##translate the reverse lookup zone
 
 sub create_virtual_host()
 {
@@ -41,6 +50,8 @@ END
 
 sub setup_bind_1
 {
+	##Dump the zones to the conf file in /etc/named.d/
+	#//Had this done but lost the work!
 
 }
 
@@ -48,6 +59,7 @@ sub setup_bind_1
 
 sub main
 {
+
 	Functions::enable_daemon("apache2");
 	Functions::enable_daemon("named");
 	create_virtual_host();
