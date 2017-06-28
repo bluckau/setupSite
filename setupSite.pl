@@ -10,29 +10,8 @@ my $NAME="chocobo";
 my $FILE=$APACHE_VHOSTS_DIR."chocobo";
 my $ADDRESS="127.0.0.1";
 
-sub enable_daemon
-{
-	my $daemon = shift;
-	system("/usr/bin/systemctl", "enable",$daemon);
-	system("/usr/bin/systemctl", "start",$daemon);
-}
-
-sub disable_daemon
-{
-	my $daemon = shift;
-	system("/usr/bin/systemctl", "disable",$daemon);
-	system("/usr/bin/systemctl", "stop",$daemon);
-}
-
-
-sub restart_daemon
-{
-
-	my $daemon = shift;
-	system("/usr/bin/systemctl", "restart",$daemon);
-
-}
-
+#use Functions qw(restart_daemon Functions::enable_daemon disable_daemon)
+use Functions;
 
 sub create_virtual_host()
 {
@@ -60,23 +39,23 @@ END
 }
 
 
-sub setup_bind_1()
+sub setup_bind_1
 {
 
 }
 
 
 
-sub main()
+sub main
 {
-	enable_daemon("apache2");
-	enable_daemon("named");
+	Functions::enable_daemon("apache2");
+	Functions::enable_daemon("named");
 	create_virtual_host();
-	restart_daemon("apache2");
+	Functions::restart_daemon("apache2");
 	#TODO: need to open ports instead of disabling the firewall 
-	disable_daemon("SuSEfirewall2_init";
-	disable_daemon("SuSEfirewall2";
+	Functions::disable_daemon("SuSEfirewall2_init");
+	Functions::disable_daemon("SuSEfirewall2");
 }
 
-main();
+main;
 

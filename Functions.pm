@@ -1,12 +1,5 @@
-#!/usr/bin/perl
-
-
+package Functions;
 use strict;
-use warnings;
-my $APACHE_VHOSTS_DIR="/etc/apache2/vhosts.d/";
-my $NAME="chocobo";
-my $FILE=$APACHE_VHOSTS_DIR."chocobo";
-my $ADDRESS="127.0.0.1";
 
 sub enable_daemon
 {
@@ -22,7 +15,6 @@ sub disable_daemon
 	system("/usr/bin/systemctl", "stop",$daemon);
 }
 
-
 sub restart_daemon
 {
 
@@ -32,4 +24,5 @@ sub restart_daemon
 }
 
 
+return 1;
 
