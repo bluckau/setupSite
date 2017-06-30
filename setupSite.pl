@@ -28,6 +28,23 @@ if (not defined $maskbits) {
 
 my $vhosts_file=$APACHE_VHOSTS_DIR.$name;
 my $dns_file=$BIND_DIR.$name;
+
+
+sub setup_resolv()
+{
+	#back up the file if a backup is not present
+	if (! -e "/etc/resolv.conf.bak")
+	{
+		copy("/etc/resolv.conf", "/etc/resolv.conf.bak");
+	}
+	my $filename = "/etc/resolv.conf";
+	unlink ($filename);
+	open(FILE, ">>$filename");
+	print FILE <<"END";
+nameserver 127.0.0.1;
+END
+
+}
 sub create_virtual_host()
 {
 	my $filename = $vhosts_file;
@@ -61,12 +78,9 @@ sub setup_bind
 	my $net_addr = Functions::gen_network_addr ($ip_addr,$maskbits);
 	#print "Net addr = " . $net_addr;
 	#print "file = ".$filename;
+	unlink($filename);
 	open (FILE, ">>$filename");
 	print FILE <<"END";
-
-allow-query { 127.0.0.1; $net_addr;};
-
-
 zone    "$name.local"   {
         type master;
         file    "for.$name.local";
@@ -74,54 +88,49 @@ zone    "$name.local"   {
 
 zone   "$rev_zone_name"        {
          type master;
+         notify no;
          file    "rev.$name.local";
 };
-END
 
-	open (FILE ">>$forward_zone_filename");
+END
+	unlink("$ZONE_DIR/for.$name.local");
+	open (FILE, ">>$ZONE_DIR/for.$name.local");
 	print FILE <<"END";
 ;
-; BIND data file for test.local zone
+; BIND data file for $name.local zone
 ;
-
-$TTL 1W
-@               IN SOA  @   $name.local root.$name.local (
-1       ; Serial
-2D              ; refresh
-4H              ; retry
-6W              ; expiry
-1W )            ; minimum
-
-        IN      A       $ip_addr
-        ;
-        @       IN      NS      $name.local.
-        @       IN      AAA     ::1
+\$TTL 604800
+@               IN SOA  ns.$name.local. $name.localhost. (
+1024            ; Serial
+604800          ; refresh
+86400           ; retry
+2419200         ; expiry
+604800 )        ; Negative Cache TTL
+;
+@ IN NS ns.$name.local.
+ns IN A $net_addr	
 END
-        open (FILE ">>$reverse_zone_filename");
+	unlink("$ZONE_DIR/rev.$name.local");
+        open (FILE, ">>$ZONE_DIR/rev.$name.local");
         print FILE <<"END";
 ;
 ; BIND reverse data file for rev.$name.local
 ;
-
-
-$TTL 1W
-@               IN SOA          $name.local      root.$name.local (
-	1               ; Serial
-	2D              ; refresh
-	4H              ; retry
-	6W              ; expiry
-	1W )            ; minimum
+\$TTL 604800
+@               IN SOA          ns.$name.local. root.localhost. (
+20              ; Serial
+604800          ; refresh
+86400           ; retry
+2419200         ; expiry
+604800 )        ; Negative Cache TTL
 ;
-                IN NS           $name.local.
-		142             IN PTR          $name.local.
+@ IN NS ns.
 END
 }
 
 
-
-
 sub main
-
+{
         #TODO: need to open ports instead of disabling the firewall
 	Functions::disable_daemon("SuSEfirewall2_init");
 	Functions::disable_daemon("SuSEfirewall2");
@@ -132,6 +141,7 @@ sub main
 	
 	Functions::enable_daemon("named");
 	setup_bind;
+	setup_resolv;
 	Functions::restart_daemon("named");
 }
 
