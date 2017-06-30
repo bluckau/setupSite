@@ -26,7 +26,7 @@ if (not defined $maskbits) {
 	$maskbits=16
 }	
 
-my $vhosts_file=$APACHE_VHOSTS_DIR.$name;
+my $vhosts_file="$APACHE_VHOSTS_DIR/$name.conf";
 my $dns_file=$BIND_DIR.$name;
 
 
@@ -47,27 +47,70 @@ END
 }
 sub create_virtual_host()
 {
-	my $filename = $vhosts_file;
-	open (FILE, ">>$filename");
-print FILE <<"END";
-
-# Ensure that Apache listens on port 
+	my $wwwdir="/srv/www/$name.local";
+	unlink ($vhosts_file);
+	open (FILE, ">>$vhosts_file");
+	print FILE <<"END";
 <VirtualHost *:80>
-    DocumentRoot "/srv/www/$name"
-    ServerName $name
-    ErrorLog /var/log/apache2/$name-error_log
-    CustomLog /var/log/apache2/$name-access_log combined
+    ServerAdmin webmaster\@$name.local
+    ServerName $name.local
+    DocumentRoot $wwwdir
+    ErrorLog /var/log/apache2/$name.local-error_log
+    CustomLog /var/log/apache2/$name.local-access_log combined
+    HostnameLookups Off
+    UseCanonicalName Off
+    ServerSignature On
+    ScriptAlias /cgi-bin/ "$wwwdir/cgi-bin/"
 
-
-    # access here, or in any related virtual host.
-    <Directory /srv/www/$name>
-    Order allow,deny
-    Allow from all 
+    <Directory "$wwwdir/cgi-bin">
+        AllowOverride None
+        Options +ExecCGI -Includes
+        <IfModule !mod_access_compat.c>
+            Require all granted
+        </IfModule>
+        <IfModule mod_access_compat.c>
+            Order allow,deny
+            Allow from all
+        </IfModule>
     </Directory>
-    
-    # Other directives here
+
+
+    <Directory "$wwwdir">
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        <IfModule !mod_access_compat.c>
+            Require all granted
+        </IfModule>
+        <IfModule mod_access_compat.c>
+            Order allow,deny
+            Allow from all
+        </IfModule>
+    </Directory>
+
 </VirtualHost>
 END
+	unless (-e $wwwdir or mkdir $wwwdir){
+		die "Unable to create directory $wwwdir\n";
+	}
+
+	my $indexfile = "$wwwdir/index.html";
+	if (! -e "$indexfile")
+	{
+		open(FILE, ">>$indexfile");
+		print FILE <<"END";
+<html>
+	<head>
+		 <title>Welcome to $name.local!</title>
+	</head>
+	<body>
+		<h1>Success!  The $name.local virtual host is working!</h1>
+	</body>
+</html>
+END
+	}
+
+
+
 }
 
 
@@ -135,9 +178,9 @@ sub main
 	Functions::disable_daemon("SuSEfirewall2_init");
 	Functions::disable_daemon("SuSEfirewall2");
 
-	#Functions::enable_daemon("apache2");
-        #create_virtual_host();
-        #Functions::restart_daemon("apache2");
+	Functions::enable_daemon("apache2");
+        create_virtual_host();
+        Functions::restart_daemon("apache2");
 	
 	Functions::enable_daemon("named");
 	setup_bind;
